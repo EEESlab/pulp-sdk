@@ -1,4 +1,5 @@
 
 [submodule "tools/gvsoc"]
 	path = tools/gvsoc
-	url = https://github.com/gvsoc/gvsoc.git
+	branch = main
+	url = https://github.com/EEESlab/gvsoc.git
