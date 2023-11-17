@@ -1,0 +1,34 @@
+name: PULP SDK MR CI
+on: pull_request
+jobs:
+  Regression-Tests:
+    name: Regression Tests
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
+      - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - name: Check out repository code
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - run: echo "The ${{ github.repository }} repository has been cloned to the runner."
+      - run: echo "The workflow is now ready to test your code on the runner."
+      - name: Install SDK dependancies
+        run: |
+          cd ${{ github.workspace }}
+          sudo apt-get install -y build-essential git libftdi-dev libftdi1 doxygen python3-pip libsdl2-dev curl cmake libusb-1.0-0-dev scons gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+          pip3 install argcomplete pyelftools prettytable
+          pip3 install -r tools/gvsoc/core/requirements.txt
+          pip3 install -r tools/gvsoc/gapy/requirements.txt
+          export -p > temp_env
+      - name: Build GVSOC Regression Tests
+        run: |
+          cd ${{ github.workspace }}
+          source temp_env
+          source configs/pulp-open.sh
+          make build
+          export -p > temp_env
+      - name: Exit from PULP SDK CI
+        run: |
+          echo "This job's status is ${{ job.status }}."
