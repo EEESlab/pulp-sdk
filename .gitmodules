@@ -1,5 +1,5 @@
 
 [submodule "tools/gvsoc"]
 	path = tools/gvsoc
-	branch = main
+	branch = tristan-dev
 	url = https://github.com/EEESlab/gvsoc.git
