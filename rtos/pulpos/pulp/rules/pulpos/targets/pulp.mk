@@ -7,16 +7,41 @@ ifneq ($(and $(PULP_RISCV_GCC_TOOLCHAIN),$(PULP_RISCV_LLVM_TOOLCHAIN)),)
 $(error PULP_RISCV_GCC_TOOLCHAIN and PULP_RISCV_LLVM_TOOLCHAIN cannot be set both at the same time)
 endif
 
+ifndef CHIP_CORE_ISA
+CHIP_CORE_ISA = pulpv2
+endif
+
+ifeq '$(CHIP_CORE_ISA)' 'corev'
+ISA_SPEC = rv32imfc_xcv
+ADDITIONAL_SPEC= 
+PULP_CC = riscv32-corev-elf-gcc 
+PULP_AR ?= riscv32-corev-elf-ar
+PULP_LD ?= riscv32-corev-elf-gcc
+PULP_OBJDUMP ?= riscv32-corev-elf-objdump
+else
+PULP_CC = riscv32-unknown-elf-gcc 
+PULP_AR ?= riscv32-unknown-elf-ar
+PULP_LD ?= riscv32-unknown-elf-gcc
+PULP_OBJDUMP ?= riscv32-unknown-elf-objdump
 ifdef PULP_RISCV_GCC_TOOLCHAIN
-PULP_ARCH_CFLAGS ?=  -march=rv32imcxgap9 -mPE=$(CONFIG_NB_CLUSTER_PE) -mFC=1
-PULP_ARCH_LDFLAGS ?=  -march=rv32imcxgap9 -mPE=$(CONFIG_NB_CLUSTER_PE) -mFC=1
-PULP_ARCH_OBJDFLAGS ?= -Mmarch=rv32imcxgap9
+ADDITIONAL_SPEC=-mPE^=^$^(CONFIG_NB_CLUSTER_PE^) -mFC^=1
+ISA_SPEC = rv32imcxgap9
+else
+ADDITIONAL_SPEC=-target riscv32-unknown-elf --sysroot^=^$^{PULP_RISCV_LLVM_TOOLCHAIN^}/riscv32-unknown-elf -ffreestanding
+ISA_SPEC = rv32imcxpulpv2
+endif
+endif
+
+ifdef PULP_RISCV_GCC_TOOLCHAIN
+PULP_ARCH_CFLAGS ?=  -march=$(ISA_SPEC) $(ADDITIONAL_SPEC)
+PULP_ARCH_LDFLAGS ?=  -march=$(ISA_SPEC) $(ADDITIONAL_SPEC)
+PULP_ARCH_OBJDFLAGS ?= -Mmarch=$(ISA_SPEC)
 endif
 
 ifdef PULP_RISCV_LLVM_TOOLCHAIN
-PULP_ARCH_CFLAGS ?=   -target riscv32-unknown-elf -march=rv32imcxpulpv2 --sysroot=${PULP_RISCV_LLVM_TOOLCHAIN}/riscv32-unknown-elf -ffreestanding
-PULP_ARCH_LDFLAGS ?=  -march=rv32imcxpulpv2
-PULP_ARCH_OBJDFLAGS ?= -Mmarch=rv32imcxpulpv2
+PULP_ARCH_CFLAGS ?=   -march=$(ISA_SPEC) $(ADDITIONAL_SPEC)
+PULP_ARCH_LDFLAGS ?=  -march=$(ISA_SPEC) $(ADDITIONAL_SPEC)
+PULP_ARCH_OBJDFLAGS ?= -Mmarch=$(ISA_SPEC)
 endif
 
 PULP_CFLAGS    += -fdata-sections -ffunction-sections -include pos/chips/pulp/config.h -I$(PULPOS_PULP_HOME)/include/pos/chips/pulp -I$(PULP_EXT_LIBS)/include
@@ -25,10 +50,6 @@ PULP_CFLAGS    += -fopenmp -mnativeomp
 endif
 PULP_LDFLAGS += -nostartfiles -nostdlib -Wl,--gc-sections -L$(PULP_EXT_LIBS) -L$(PULPOS_PULP_HOME)/kernel -Tchips/pulp/link.ld -lgcc
 
-PULP_CC = riscv32-unknown-elf-gcc 
-PULP_AR ?= riscv32-unknown-elf-ar
-PULP_LD ?= riscv32-unknown-elf-gcc
-PULP_OBJDUMP ?= riscv32-unknown-elf-objdump
 
 fc/archi=riscv
 pe/archi=riscv
