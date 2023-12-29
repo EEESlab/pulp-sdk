@@ -31,13 +31,8 @@
 // instead of classic load/store because otherwise the compiler is not able to correctly factorize
 // the HWME base in case several accesses are done, ending up with twice more code
 
-#if defined(__riscv__) && !defined(RV_ISA_RV32)
-#define IMA_WRITE(value, offset) __builtin_pulp_OffsetedWrite(value, (int *)IMA_ADDR_BASE, offset)
-#define IMA_READ(offset) __builtin_pulp_OffsetedRead((int *)IMA_ADDR_BASE, offset)
-#else
-#define IMA_WRITE(value, offset) pulp_write32(IMA_ADDR_BASE + (offset), value)
-#define IMA_READ(offset) pulp_read32(IMA_ADDR_BASE + (offset))
-#endif
+#define IMA_WRITE(value, offset) __WRITE_BASE_OFF_VOL(value, (int *)IMA_ADDR_BASE, offset)
+#define IMA_READ(offset) __READ_BASE_OFF_VOL((int *)IMA_ADDR_BASE, offset)
 
 
 static inline void ima_trigger_job() {

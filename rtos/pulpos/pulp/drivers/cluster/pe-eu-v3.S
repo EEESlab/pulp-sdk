@@ -21,7 +21,9 @@
 #include <pos/data/data.h>
 
     .section .cluster.text , "ax"
-
+#ifdef ARCHI_HAS_COREV
+    .attribute arch, "rv32imc_xcv"
+#endif
     .global pos_pe_start
 pos_pe_start:
     csrr    a0, 0xF14
@@ -142,7 +144,12 @@ pos_master_no_slave_barrier:
 
     // Set stack on slaves
     // For that we push first the function for setting stack, then the stack size and the base
+#ifdef ARCHI_HAS_COREV
+    //cv.beqimm t5, 0, pos_master_loop_no_slave
+    beqz    t5, pos_master_loop_no_slave
+#else
     p.beqimm t5, 0, pos_master_loop_no_slave
+#endif
     sw      s10, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s3)
     sw      t2, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s3)
     sw      sp, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s3)
@@ -155,7 +162,17 @@ pos_master_loop_no_slave:
 
 pos_master_sleep:
     sw      s4, EU_CORE_MASK_OR(s3)
+#ifdef ARCHI_HAS_COREV
+    //cv.elw   x0, EU_CORE_EVENT_WAIT_CLEAR(s3)
+    lw         x0, EU_CORE_EVENT_WAIT_CLEAR(s3)
+    //beqz       x0, hal_itc_wait_for_interrupt
+    bnez       x0, L10
+    wfi
+L10:
+
+#else
     p.elw   x0, EU_CORE_EVENT_WAIT_CLEAR(s3)
+#endif
     sw      s4, EU_CORE_MASK_AND(s3)
     j       pos_master_loop
 
@@ -163,14 +180,19 @@ pos_master_sleep:
 
 pos_push_event_to_fc_wait:
     sw      s4, EU_CORE_MASK_OR(s3)
+#ifdef ARCHI_HAS_COREV
+    //cv.elw   x0, EU_CORE_EVENT_WAIT_CLEAR(s3)
+    lw         x0, EU_CORE_EVENT_WAIT_CLEAR(s3)
+    //beqz       x0, hal_itc_wait_for_interrupt
+    bnez       x0, L11
+    wfi
+L11:
+
+#else
     p.elw   x0, EU_CORE_EVENT_WAIT_CLEAR(s3)
+#endif
     sw      s4, EU_CORE_MASK_AND(s3)
     j       pos_push_event_to_fc_retry
-
-
-
-
-
 
 
 
@@ -210,16 +232,50 @@ pos_fork_return:
 #ifdef ARCHI_HAS_CC
     // When the cluster has a controller barrier 0 is used for normal team barrier
     // and barrier 1 is used for end of offload
+#ifdef ARCHI_HAS_COREV
+    //cv.elw   t0, EU_BARRIER_DEMUX_OFFSET + EU_HW_BARR_TRIGGER_WAIT_CLEAR + EU_BARRIER_SIZE(s2)
+    lw         t0, EU_BARRIER_DEMUX_OFFSET + EU_HW_BARR_TRIGGER_WAIT_CLEAR + EU_BARRIER_SIZE(s2)
+    //beqz       t0, hal_itc_wait_for_interrupt
+    bnez       t0, L0
+    wfi
+L0:
+#else
     p.elw   t0, EU_BARRIER_DEMUX_OFFSET + EU_HW_BARR_TRIGGER_WAIT_CLEAR + EU_BARRIER_SIZE(s2)
+#endif /*ARCHI_HAS_COREV*/
+#else
+#ifdef ARCHI_HAS_COREV
+    //cv.elw   t0, EU_BARRIER_DEMUX_OFFSET + EU_HW_BARR_TRIGGER_WAIT_CLEAR(s2)
+    lw         t0, EU_BARRIER_DEMUX_OFFSET + EU_HW_BARR_TRIGGER_WAIT_CLEAR(s2)
+    //beqz       t0, hal_itc_wait_for_interrupt
+    bnez       t0, L1
+    wfi
+L1:
 #else
     p.elw   t0, EU_BARRIER_DEMUX_OFFSET + EU_HW_BARR_TRIGGER_WAIT_CLEAR(s2)
+#endif /*ARCHI_HAS_COREV*/
 #endif    
 
 pos_wait_for_dispatch:
 
     // Wait for PC + arg information from dispatcher
+#ifdef ARCHI_HAS_COREV
+    //cv.elw   t0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+    //cv.elw   a0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+    lw   t0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+    //beqz t0, hal_itc_wait_for_interrupt
+    bnez       t0, L2
+    wfi
+L2:
+
+    lw   a0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+    //beqz a0, hal_itc_wait_for_interrupt
+    bnez       a0, L3
+    wfi
+L3:
+#else
     p.elw   t0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
     p.elw   a0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+#endif
 
     // Check if this is an entry with a barrier at the end (fork entry)
     andi    t1, t0, 1
@@ -243,7 +299,18 @@ pos_other_entry:
 pos_set_slave_stack:
 
     // Multiply the stack size by the core ID and add the stack base to get our stack
+#ifdef ARCHI_HAS_COREV
+    //cv.elw   t0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+    lw   t0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+//    beqz t0, hal_itc_wait_for_interrupt
+    bnez       t0, L4
+    wfi
+L4:
+
+
+#else
     p.elw   t0, EU_DISPATCH_DEMUX_OFFSET + EU_DISPATCH_FIFO_ACCESS(s2)
+#endif
 #if defined(CONFIG_PULP)
     addi     t5, s3, 0
 #else
@@ -251,7 +318,11 @@ pos_set_slave_stack:
     // and thus we need to take the next stack
     addi     t5, s3, 1
 #endif
-    mul   t4, t5, a0
+#ifdef ARCHI_HAS_COREV
+    cv.muls   t4, t5, a0
+#else
+    p.mul   t4, t5, a0
+#endif
     add     sp, t4, t0
 
     ret

@@ -12,13 +12,15 @@ CHIP_CORE_ISA = pulpv2
 endif
 
 ifeq '$(CHIP_CORE_ISA)' 'corev'
-ISA_SPEC = rv32imfc_xcv
+PULP_CFLAGS += -DARCHI_HAS_COREV -DPLP_NO_BUILTIN
+ISA_SPEC = rv32imf_xcv
 ADDITIONAL_SPEC= 
 PULP_CC = riscv32-corev-elf-gcc 
 PULP_AR ?= riscv32-corev-elf-ar
 PULP_LD ?= riscv32-corev-elf-gcc
 PULP_OBJDUMP ?= riscv32-corev-elf-objdump
 else
+PULP_CFLAGS += -DARCHI_CORE_HAS_PULPV2
 PULP_CC = riscv32-unknown-elf-gcc 
 PULP_AR ?= riscv32-unknown-elf-ar
 PULP_LD ?= riscv32-unknown-elf-gcc

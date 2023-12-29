@@ -21,7 +21,9 @@
 #include <pos/data/data.h>
 
     .section .text_l2
-
+#ifdef ARCHI_HAS_COREV
+    .attribute arch, "rv32imc_xcv"
+#endif
     .global pos_time_timer_handler_asm
 pos_time_timer_handler_asm:
     add sp, sp, -8

@@ -22,7 +22,9 @@
 
 
     .section .text_l2
-
+#ifdef ARCHI_HAS_COREV
+    .attribute arch, "rv32imc_xcv"
+#endif
     #
     # SOC event handler entry
     #
@@ -41,7 +43,6 @@
     sw  x10, 8(sp)
     sw  x11, 12(sp)
     sw  x12, 16(sp)
-    sw  t0, 20(sp)
 
 
 
@@ -74,9 +75,17 @@
     lw   x11, %tiny(pos_soc_event_callback_arg)(x11)
 #else
     la   t0, pos_soc_event_callback
+#ifdef ARCHI_HAS_COREV
+    cv.lw x12, t0(x11)
+#else
     p.lw x12, t0(x11)
+#endif /*ARCHI_HAS_COREV*/
     la   t0, pos_soc_event_callback_arg
+#ifdef ARCHI_HAS_COREV
+    cv.lw x11, t0(x11)
+#else
     p.lw x11, t0(x11)
+#endif /*ARCHI_HAS_COREV*/
 #endif
     la   x9, pos_soc_event_handler_end_asm
     j    pos_irq_call_external_c_function
@@ -101,17 +110,31 @@ pos_soc_event_store_asm:
     lw      x12, %tiny(pos_soc_event_status)(x11)
 #else
     la   t0, pos_soc_event_status
+#ifdef ARCHI_HAS_COREV
+    cv.lw x12, t0(x11)
+#else
     p.lw x12, t0(x11)
+#endif /*ARCHI_HAS_COREV*/
 #endif
     andi    x10, x10, 0x1f
-
+#ifdef ARCHI_HAS_COREV
+    li     x11, 1
+    sll    x11, x11, x10
+    or     x12, x12, x11
+    #cv.bsetr x12, x12, x10    #rD = rs1 | (((1 << (rs2[9:5]+1)) – 1) << rs2[4:0])
+#else
     p.bsetr x12, x12, x10
+#endif /*ARCHI_HAS_COREV*/
 
 #ifdef CONFIG_NO_STD_RELOC
     sw      x12, %tiny(pos_soc_event_status)(x11)
 #else
     la      t0, pos_soc_event_status
+#ifdef ARCHI_HAS_COREV
+    cv.sw    x12, t0(x11)
+#else
     p.sw    x12, t0(x11)
+#endif /*ARCHI_HAS_COREV*/
 #endif
 
 
@@ -126,6 +149,5 @@ pos_soc_event_handler_end_asm:
     lw  x10, 8(sp)
     lw  x11, 12(sp)
     lw  x12, 16(sp)
-    lw  t0, 20(sp)
     add sp, sp, 128
     mret

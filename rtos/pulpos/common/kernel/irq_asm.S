@@ -20,7 +20,9 @@
 
 
   .section .text_l2
-
+#ifdef ARCHI_HAS_COREV
+  .attribute arch, "rv32imc_xcv"
+#endif
   .global pos_irq_call_external_c_function
 pos_irq_call_external_c_function:
 
